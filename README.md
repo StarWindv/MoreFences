@@ -1,9 +1,61 @@
 # MoreFences
 
-## Setup
+> 你是否还在为 Minecraft 里没有对应颜色的栅栏/栅栏门而被迫使用其它不好看的栅栏?
+> 
+> 你是否还在为了翻遍各大网站而找不到一个独立的栅栏模组而烦恼?
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+**那恭喜你, 你发现了本模组!**
 
-## License
+## ToC
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+- [MoreFences](#morefences)
+  - [ToC](#toc)
+  - [I. 栅栏/栅栏门](#i-栅栏栅栏门)
+  - [II. 合成配方](#ii-合成配方)
+    - [2.1 玻璃系](#21-玻璃系)
+    - [2.2 羊毛系](#22-羊毛系)
+  - [III. 连通性限制](#iii-连通性限制)
+  - [IV. Public API](#iv-public-api)
+  - [V. 材质](#v-材质)
+  - [VI. License](#vi-license)
+
+---
+
+## I. 栅栏/栅栏门
+
+如模组名所描述的那样, 本模组目前为游戏添加了不同玻璃/羊毛变体对应的栅栏/栅栏门, 数量过多, 此处不赘述.
+
+---
+
+## II. 合成配方
+
+### 2.1 玻璃系
+
+### 2.2 羊毛系
+
+---
+
+## III. 连通性限制
+
+---
+
+## IV. Public API
+
+以下是目前公开的, 可能对模组开发者有用的 API:
+
+|名称|路径|说明|
+|---|---|---|
+| | | |
+
+---
+
+## V. 材质
+
+本模组使用动态方式加载贴图, 因此正常情况下可以自动兼容原材料所对应的方块贴图.
+
+---
+
+## VI. License
+
+本项目以[Apache-2.0](./LICENSE)协议开源.
+
