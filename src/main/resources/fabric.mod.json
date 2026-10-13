@@ -3,10 +3,16 @@
 	"id": "morefences",
 	"version": "${version}",
 	"name": "MoreFences",
-	"description": "Adds a fence and a fence gate for several material groups - glass and wool for now - using the vanilla models and the vanilla textures of the base block. Fences only connect within their group.",
+	"description": "Added a variety of different fences and fence gates to the game.",
 	"authors": [
-		"Me!"
+		"StarWindv"
 	],
+    "contact": {
+        "homepage": "https://github.com/StarWindv/MoreFences",
+        "sources": "https://github.com/StarWindv/MoreFences",
+        "issues": "https://github.com/StarWindv/MoreFences/issues",
+        "original": "https://github.com/StarWindv/MoreFences"
+    },
 	"license": "Apache-2.0",
 	"icon": "assets/morefences/icon.png",
 	"environment": "*",
@@ -31,3 +37,4 @@
 		"fabric-api": "*"
 	}
 }
+
