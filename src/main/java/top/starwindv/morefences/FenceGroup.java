@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 
 import org.jspecify.annotations.Nullable;
 
@@ -43,14 +44,40 @@ public final class FenceGroup {
 	private static final Map<String, FenceGroup> GROUPS = new LinkedHashMap<>();
 
 	/**
-	 * Glass and every stained / tinted glass block.
+	 * How much of the burn time of the raw materials survives crafting, taken from the vanilla wooden
+	 * fences ({@code u} is the base smelt time, the ratios do not depend on it):
+	 *
+	 * <pre>
+	 * wooden fence:      4 planks (1.5u) + 2 sticks (0.5u) = 7u  -&gt; 3 fences (1.5u) = 4.5u   keep 9/14
+	 * wooden fence gate: 1 plank  (1.5u) + 2 sticks (0.5u) = 2.5u -&gt; 1 gate   (1.5u)        keep 3/5
+	 * </pre>
+	 *
+	 * Feeding the raw materials of a wooden fence through this formula gives exactly 300 ticks back, which
+	 * is what vanilla pays; the wool group ends up with 85 ticks per fence and 60 per fence gate.
+	 */
+	private static final int FENCE_FUEL_KEPT = 9, FENCE_FUEL_RAW = 14;
+	private static final int GATE_FUEL_KEPT = 3, GATE_FUEL_RAW = 5;
+
+	/**
+	 * The recipes of {@link top.starwindv.morefences.datagen.MoreFencesRecipeProvider}: {@code W#W / W#W} is
+	 * 4 base blocks + 2 rods -&gt; 3 fences and {@code #W# / #W#} is 1 base block + 2 rods -&gt; 1 gate. Keep
+	 * in sync with the patterns there.
+	 */
+	private static final int FENCE_BASE_MATERIALS = 4, FENCE_ROD_MATERIALS = 2, FENCE_PRODUCTS = 3;
+	private static final int GATE_BASE_MATERIALS = 1, GATE_ROD_MATERIALS = 2, GATE_PRODUCTS = 1;
+
+	/**
+	 * Glass and every stained / tinted glass block. Neither glass nor glass panes are fuel in vanilla, so
+	 * this group stays non flammable.
 	 */
 	public static final FenceGroup GLASS = register("glass", SoundType.GLASS, MoreFencesContent::paneFor, true);
 
 	/**
-	 * The sixteen wool blocks; string takes the role of the stick of the vanilla recipes.
+	 * The sixteen wool blocks; string takes the role of the stick of the vanilla recipes. Wool burns like
+	 * the planks do (half a base smelt time), string does not burn at all.
 	 */
-	public static final FenceGroup WOOL = register("wool", SoundType.WOOL, base -> Items.STRING, false);
+	public static final FenceGroup WOOL = register("wool", SoundType.WOOL, base -> Items.STRING, false)
+		.fuelFromMaterials(baseSmeltTime -> baseSmeltTime / 2, baseSmeltTime -> 0);
 
 	private final String name;
 	private final SoundType sound;
@@ -61,6 +88,8 @@ public final class FenceGroup {
 	private final TagKey<Item> fenceItemTag;
 	private final TagKey<Item> fenceGateItemTag;
 	private @Nullable WoodType gateWoodType;
+	private IntUnaryOperator fenceBurnTime = baseSmeltTime -> 0;
+	private IntUnaryOperator gateBurnTime = baseSmeltTime -> 0;
 
 	private FenceGroup(final String name, final SoundType sound, final Function<Block, Item> rodFor, final boolean translucent) {
 		this.name = name;
@@ -141,6 +170,53 @@ public final class FenceGroup {
 	 */
 	public Item rodFor(final Block base) {
 		return this.rodFor.apply(base);
+	}
+
+	/**
+	 * Makes the fences of this group burn, with the given burn times in ticks. Groups are non flammable by
+	 * default, which is what the glass group relies on.
+	 *
+	 * @param fenceBurnTime how long one fence burns
+	 * @param gateBurnTime  how long one fence gate burns
+	 */
+	public FenceGroup fuel(final int fenceBurnTime, final int gateBurnTime) {
+		this.fenceBurnTime = baseSmeltTime -> fenceBurnTime;
+		this.gateBurnTime = baseSmeltTime -> gateBurnTime;
+		return this;
+	}
+
+	/**
+	 * Makes the fences of this group burn, splitting the burn time of their raw materials over the products
+	 * with the loss the vanilla wooden fences have - see {@link #FENCE_FUEL_KEPT}. That keeps a group honest:
+	 * burning the materials directly is always at least as good as crafting and burning the fence.
+	 *
+	 * @param baseBurnTime how long one base block burns, given the base smelt time
+	 * @param rodBurnTime  how long one rod burns, given the base smelt time
+	 */
+	public FenceGroup fuelFromMaterials(final IntUnaryOperator baseBurnTime, final IntUnaryOperator rodBurnTime) {
+		this.fenceBurnTime = baseSmeltTime -> {
+			int raw = FENCE_BASE_MATERIALS * baseBurnTime.applyAsInt(baseSmeltTime) + FENCE_ROD_MATERIALS * rodBurnTime.applyAsInt(baseSmeltTime);
+			return raw * FENCE_FUEL_KEPT / (FENCE_FUEL_RAW * FENCE_PRODUCTS);
+		};
+		this.gateBurnTime = baseSmeltTime -> {
+			int raw = GATE_BASE_MATERIALS * baseBurnTime.applyAsInt(baseSmeltTime) + GATE_ROD_MATERIALS * rodBurnTime.applyAsInt(baseSmeltTime);
+			return raw * GATE_FUEL_KEPT / (GATE_FUEL_RAW * GATE_PRODUCTS);
+		};
+		return this;
+	}
+
+	/**
+	 * @return how long one fence of this group burns, in ticks; {@code 0} means it is no fuel at all.
+	 */
+	public int fenceBurnTime(final int baseSmeltTime) {
+		return this.fenceBurnTime.applyAsInt(baseSmeltTime);
+	}
+
+	/**
+	 * @return how long one fence gate of this group burns, in ticks; {@code 0} means it is no fuel at all.
+	 */
+	public int gateBurnTime(final int baseSmeltTime) {
+		return this.gateBurnTime.applyAsInt(baseSmeltTime);
 	}
 
 	/**

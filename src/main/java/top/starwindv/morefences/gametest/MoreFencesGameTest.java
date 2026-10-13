@@ -7,12 +7,15 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.FuelValues;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import top.starwindv.morefences.FenceGroup;
@@ -133,9 +136,36 @@ public class MoreFencesGameTest {
 		helper.succeed();
 	}
 
+	/**
+	 * Wool burns for half a base smelt time (100 ticks), string does not burn at all, so a wool fence has
+	 * 400 ticks of raw materials and a wool fence gate 100. They are handed to the furnace with the loss
+	 * the vanilla wooden fences have: (4 x 100) x 9/14 / 3 = 85 ticks per fence and (1 x 100) x 3/5 = 60
+	 * per gate. Glass and glass panes are no fuel, so neither are the glass fences.
+	 */
+	@GameTest
+	public void fencesBurnWithTheVanillaWoodenFenceLoss(GameTestHelper helper) {
+		FuelValues fuels = helper.getLevel().fuelValues();
+		Block whiteWool = Blocks.WOOL.pick(DyeColor.WHITE);
+
+		// The assumptions the numbers above are based on.
+		helper.assertTrue(fuels.burnDuration(new ItemStack(entryOf(whiteWool).baseItem())) == 100, "wool itself burns 100 ticks");
+		helper.assertFalse(fuels.isFuel(new ItemStack(Items.STRING)), "string is no fuel");
+
+		int woolFenceBurns = fuels.burnDuration(new ItemStack(fenceItemOf(whiteWool)));
+		int woolGateBurns = fuels.burnDuration(new ItemStack(gateItemOf(whiteWool)));
+		helper.assertTrue(woolFenceBurns == 85, "a wool fence burns 85 ticks, but burns " + woolFenceBurns);
+		helper.assertTrue(woolGateBurns == 60, "a wool fence gate burns 60 ticks, but burns " + woolGateBurns);
+
+		helper.assertFalse(fuels.isFuel(new ItemStack(fenceItemOf(Blocks.GLASS))), "a glass fence is no fuel");
+		helper.assertFalse(fuels.isFuel(new ItemStack(gateItemOf(Blocks.GLASS))), "a glass fence gate is no fuel");
+
+		// Crafting a fence out of fuel materials is never worth it, same as in vanilla.
+		helper.assertTrue(woolFenceBurns * 3 <= 4 * 100, "a wool fence must burn less than its wool");
+		helper.succeed();
+	}
+
 	@GameTest(maxTicks = 40)
-	public void gateOpensAndClosesWithRedstone(GameTestHelper helper) {
-		BlockPos gatePos = new BlockPos(3, 1, 3);
+	public void gateOpensAndClosesWithRedstone(GameTestHelper helper) {		BlockPos gatePos = new BlockPos(3, 1, 3);
 		BlockPos powerPos = gatePos.east();
 
 		helper.setBlock(gatePos, gateOf(Blocks.GLASS));
@@ -269,6 +299,14 @@ public class MoreFencesGameTest {
 
 	private static Block gateOf(Block base) {
 		return entryOf(base).fenceGate();
+	}
+
+	private static Item fenceItemOf(Block base) {
+		return entryOf(base).fenceItem();
+	}
+
+	private static Item gateItemOf(Block base) {
+		return entryOf(base).fenceGateItem();
 	}
 
 	private static MoreFencesContent.Entry entryOf(Block base) {

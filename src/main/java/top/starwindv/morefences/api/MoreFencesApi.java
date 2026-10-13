@@ -48,6 +48,9 @@ import top.starwindv.morefences.MoreFencesContent.Entry;
  *     <li>Models, recipes, loot tables and tags are generated while the MoreFences jar is built, so a
  *     complete result (working recipe, tags, ...) needs the foreign block to be present at build time too.
  *     Runtime only registers the blocks and items.</li>
+ *     <li>Fences are no furnace fuel by default. {@link FenceGroup#fuel(int, int)} gives them a burn time
+ *     and {@link FenceGroup#fuelFromMaterials(IntUnaryOperator, IntUnaryOperator)} derives one from the
+ *     burn times of the materials, keeping the loss the vanilla wooden fences have.</li>
  * </ul>
  */
 public final class MoreFencesApi {
