@@ -1,0 +1,151 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
+}
+
+// The pack that `runDatagen` produces (blockstates, models, recipes, loot tables, tags, lang). It is a
+// build artifact and therefore git ignored. It is deliberately NOT attached as a source set resource:
+// runDatagen needs the compiled mod, so that would create a task cycle. The jar and the dev runs attach
+// it explicitly instead. (`build/generated` would clash with the dirs the java plugin generates into.)
+//
+// Two directories are needed because the data generator treats every file in its output directory that
+// it did not write itself as stale and deletes it:
+//   build/datagen          - only the raw data generator output, shipped inside the jar
+//   build/generated-pack   - a copy of it plus a fabric.mod.json, used by the dev runs
+def datagenDir = layout.buildDirectory.dir("datagen").get().asFile
+def generatedPackDir = layout.buildDirectory.dir("generated-pack").get().asFile
+
+// Fabric only treats classpath roots that contain a fabric.mod.json as mod resources, and this mod's own
+// resource root is the much earlier `processResources` output. The dev runs therefore load the generated
+// pack as a second, resource only mod; the jar ships it as part of this mod instead.
+def generatedPack = tasks.register("generatedPack", Sync) {
+	dependsOn(tasks.named("runDatagen"))
+	from(datagenDir) {
+		exclude(".cache/**")
+	}
+	into(generatedPackDir)
+}
+
+def generatedPackMarker = tasks.register("generatedPackMarker") {
+	def marker = new File(generatedPackDir, "fabric.mod.json")
+	dependsOn(generatedPack)
+	outputs.file(marker)
+
+	doLast {
+		marker.text = """{
+	"schemaVersion": 1,
+	"id": "morefences_generated",
+	"version": "1.0.0",
+	"name": "MoreFences generated resources",
+	"description": "Resource and data pack produced by runDatagen. Only used by the development runs.",
+	"environment": "*",
+	"license": "Apache-2.0"
+}
+"""
+	}
+}
+
+fabricApi {
+	// Data generation (blockstates, models, recipes, loot tables, tags and lang), run with
+	// `./gradlew runDatagen`. It is hooked into `jar`, `runClient` and `runGameTest` automatically.
+	configureDataGeneration {
+		client = true
+		addToResources = false
+		outputDirectory = datagenDir
+	}
+
+	// Game tests for the fence connection and redstone behaviour, run with `./gradlew runGameTest`.
+	configureTests {
+		enableGameTests = true
+		eula = true
+	}
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+	// if it is present.
+	// If you remove this line, sources will not be generated.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	// Ship the generated resource/data pack as part of this mod.
+	from(datagenDir) {
+		exclude(".cache/**")
+	}
+	dependsOn(tasks.named("runDatagen"))
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+// The dev runs need the generated pack on their classpath as well (recipes, tags, models, ...), where it
+// is picked up as its own resource only mod - see `generatedPackMarker` above.
+tasks.matching { it.name in ["runClient", "runServer", "runGameTest", "runClientGameTest"] }.configureEach { task ->
+	dependsOn(generatedPackMarker)
+
+	if (task instanceof JavaExec) {
+		task.classpath(files(generatedPackDir))
+	}
+}
+
+// Regenerate whenever the mod or its resources change; the task only declares the output directory, so
+// without these inputs it would be considered up to date for far too long.
+tasks.matching { it.name == "runDatagen" }.configureEach {
+	dependsOn(tasks.named("classes"))
+	inputs.files(tasks.named("classes")).withPropertyName("morefencesMod")
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}

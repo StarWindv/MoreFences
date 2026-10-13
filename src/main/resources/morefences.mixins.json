@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "top.starwindv.morefences.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"FenceBlockMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

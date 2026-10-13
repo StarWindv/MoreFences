@@ -1,0 +1,33 @@
+{
+	"schemaVersion": 1,
+	"id": "morefences",
+	"version": "${version}",
+	"name": "MoreFences",
+	"description": "Adds a fence and a fence gate for several material groups - glass and wool for now - using the vanilla models and the vanilla textures of the base block. Fences only connect within their group.",
+	"authors": [
+		"Me!"
+	],
+	"license": "Apache-2.0",
+	"icon": "assets/morefences/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"top.starwindv.morefences.MoreFences"
+		],
+		"fabric-datagen": [
+			"top.starwindv.morefences.datagen.MoreFencesDataGenerator"
+		],
+		"fabric-gametest": [
+			"top.starwindv.morefences.gametest.MoreFencesGameTest"
+		]
+	},
+	"mixins": [
+		"morefences.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
